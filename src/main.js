@@ -1,24 +1,37 @@
-import './style.css'
-import javascriptLogo from './javascript.svg'
-import viteLogo from '/vite.svg'
-import { setupCounter } from './counter.js'
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/Addons.js";
 
-document.querySelector('#app').innerHTML = `
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="${viteLogo}" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank">
-      <img src="${javascriptLogo}" class="logo vanilla" alt="JavaScript logo" />
-    </a>
-    <h1>Hello Vite!</h1>
-    <div class="card">
-      <button id="counter" type="button"></button>
-    </div>
-    <p class="read-the-docs">
-      Click on the Vite logo to learn more
-    </p>
-  </div>
-`
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
 
-setupCounter(document.querySelector('#counter'))
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setAnimationLoop(animate);
+document.body.appendChild(renderer.domElement);
+camera.position.z = 5;
+
+const earthGroup = new THREE.Group();
+earthGroup.rotation.z = (-23.4 * Math.PI) / 180;
+scene.add(earthGroup);
+new OrbitControls(camera, renderer.domElement);
+const loader = new THREE.TextureLoader();
+const geometry = new THREE.IcosahedronGeometry(1, 12);
+const material = new THREE.MeshBasicMaterial({
+  map: loader.load("/earthmap1k.jpg"),
+});
+const earthMesh = new THREE.Mesh(geometry, material);
+earthGroup.add(earthMesh);
+
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444);
+scene.add(hemiLight);
+
+function animate() {
+  earthMesh.rotation.y += 0.002;
+
+  renderer.render(scene, camera);
+}
