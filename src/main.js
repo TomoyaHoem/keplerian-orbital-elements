@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/Addons.js";
-import * as dat from "dat.gui";
+// import * as dat from "dat.gui";
 import { degToRad } from "three/src/math/MathUtils.js";
+import GUI from "lil-gui";
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
@@ -88,7 +89,7 @@ function drawEllipse() {
   ellipse.geometry = geom;
 }
 
-const gui = new dat.GUI();
+const gui = new GUI();
 const orbitFolder = gui.addFolder("Keplerian Elements");
 //gui.add(orbit, "periapsis", 1, 4).onChange(() => drawEllipse());
 //gui.add(orbit, "apoapsis", 1, 4).onChange(() => drawEllipse());
