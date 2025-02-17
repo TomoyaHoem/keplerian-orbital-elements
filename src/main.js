@@ -31,6 +31,8 @@ const earthMesh = new THREE.Mesh(geometry, material);
 earthGroup.add(earthMesh);
 
 const axesHelper = new THREE.AxesHelper(10);
+//stop helper lines from overlapping
+axesHelper.position.y += 0.0005;
 scene.add(axesHelper);
 const gridHelper = new THREE.GridHelper(200, 100);
 scene.add(gridHelper);
