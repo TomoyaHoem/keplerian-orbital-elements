@@ -4,6 +4,8 @@ import { OrbitControls } from "three/examples/jsm/Addons.js";
 import { degToRad } from "three/src/math/MathUtils.js";
 import GUI from "lil-gui";
 
+//* Setup Scene, Camera and Renderer
+
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
   75,
@@ -16,21 +18,16 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setAnimationLoop(animate);
 document.body.appendChild(renderer.domElement);
+// move camera so objects in origin visible
 camera.position.z = 5;
 
-const earthGroup = new THREE.Group();
-//earthGroup.rotation.z = (-23.4 * Math.PI) / 180;
-scene.add(earthGroup);
+//* Controls and Loader setup
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.minDistance = 3;
 controls.maxDistance = 25;
 const loader = new THREE.TextureLoader();
-const geometry = new THREE.IcosahedronGeometry(1, 12);
-const material = new THREE.MeshBasicMaterial({
-  map: loader.load("earthmap1k.jpg"),
-});
-const earthMesh = new THREE.Mesh(geometry, material);
-earthGroup.add(earthMesh);
+
+//* Helper setup
 
 const axesHelper = new THREE.AxesHelper(10);
 //stop helper lines from overlapping
@@ -38,6 +35,20 @@ axesHelper.position.y += 0.0005;
 scene.add(axesHelper);
 const gridHelper = new THREE.GridHelper(200, 100);
 scene.add(gridHelper);
+
+//* Create Earth
+
+const earthGroup = new THREE.Group();
+//earthGroup.rotation.z = (-23.4 * Math.PI) / 180;
+scene.add(earthGroup);
+const geometry = new THREE.IcosahedronGeometry(1, 12);
+const material = new THREE.MeshBasicMaterial({
+  map: loader.load("earthmap1k.jpg"),
+});
+const earthMesh = new THREE.Mesh(geometry, material);
+earthGroup.add(earthMesh);
+
+//* Orbit setup
 
 const orbitGroup = new THREE.Group();
 scene.add(orbitGroup);
@@ -70,11 +81,13 @@ const orbit = {
   ellipseResolution: 50,
 };
 
-drawEllipse();
-
 ellipse.add(orbitPath);
 ellipse.rotation.x = Math.PI / 2;
 orbitGroup.add(ellipse);
+
+drawEllipse();
+
+//* Orbit interaction
 
 function drawEllipse() {
   const linearEccentricity = orbit.semiMajorAxis * orbit.eccentricity;
@@ -101,6 +114,8 @@ function drawEllipse() {
   ellipse.geometry = geom;
   orbitPath.geometry = new THREE.BufferGeometry().setFromPoints(points);
 }
+
+//* GUI
 
 const gui = new GUI();
 const orbitFolder = gui.addFolder("Keplerian Elements");
@@ -136,6 +151,8 @@ gui
   .name("Resolution")
   .step(1)
   .onChange(() => drawEllipse());
+
+//* Animation
 
 function animate() {
   //earthMesh.rotation.y += 0.002;
