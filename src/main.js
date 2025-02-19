@@ -39,9 +39,9 @@ scene.add(axesHelper);
 const gridHelper = new THREE.GridHelper(200, 100);
 scene.add(gridHelper);
 
-// const shape = new THREE.Shape();
-// shape.absellipse(0, 0, 2, 2, 0, 2 * Math.PI, false, 0);
-// const curve_geometry = new THREE.ShapeGeometry(shape);
+const orbitGroup = new THREE.Group();
+scene.add(orbitGroup);
+
 const curve_material = new THREE.MeshBasicMaterial({
   color: 0xffffff,
   side: THREE.DoubleSide,
@@ -50,8 +50,13 @@ const curve_material = new THREE.MeshBasicMaterial({
 });
 // Create the final object to add to the scene
 const ellipse = new THREE.Mesh(new THREE.ShapeGeometry(), curve_material);
-ellipse.rotation.x = Math.PI / 2;
-earthGroup.add(ellipse);
+const orbitPath = new THREE.Line(
+  new THREE.BufferGeometry(),
+  new THREE.LineBasicMaterial({
+    color: 0xfdffbc,
+    linewidth: 5,
+  })
+);
 
 const orbit = {
   periapsis: 1,
@@ -67,6 +72,10 @@ const orbit = {
 
 drawEllipse();
 
+ellipse.add(orbitPath);
+ellipse.rotation.x = Math.PI / 2;
+orbitGroup.add(ellipse);
+
 function drawEllipse() {
   const linearEccentricity = orbit.semiMajorAxis * orbit.eccentricity;
   const semiMinorAxis = Math.sqrt(
@@ -74,29 +83,33 @@ function drawEllipse() {
   );
 
   const shape = new THREE.Shape();
+  const points = [];
   for (let i = 0; i < orbit.ellipseResolution; i++) {
     const angle = (i / orbit.ellipseResolution - 1) * Math.PI * 2;
     const px = Math.cos(angle) * orbit.semiMajorAxis;
     const py = Math.sin(angle) * semiMinorAxis;
+    points.push(new THREE.Vector2(px, py));
     if (i === 0) {
       shape.moveTo(px, py);
     } else {
       shape.lineTo(px, py);
     }
   }
+  points.push(new THREE.Vector2(points[0].x, points[0].y));
 
   const geom = new THREE.ShapeGeometry(shape);
   ellipse.geometry = geom;
+  orbitPath.geometry = new THREE.BufferGeometry().setFromPoints(points);
 }
 
 const gui = new GUI();
 const orbitFolder = gui.addFolder("Keplerian Elements");
-//gui.add(orbit, "periapsis", 1, 4).onChange(() => drawEllipse());
-//gui.add(orbit, "apoapsis", 1, 4).onChange(() => drawEllipse());
+//orbitFolder.add(orbit, "periapsis", 0.5, 1).onChange(() => drawEllipse());
+//orbitFolder.add(orbit, "apoapsis", 1, 4).onChange(() => drawEllipse());
 orbitFolder
   .add(orbit, "semiMajorAxis", 1, 8)
   .name("a")
-  .onChange(() => drawEllipse());
+  .onChange(() => (orbit.eccentricity += 0.1) /*drawEllipse()*/);
 orbitFolder
   .add(orbit, "eccentricity", 0, 0.99)
   .name("e")
@@ -109,14 +122,14 @@ orbitFolder
 orbitFolder
   .add(orbit, "longitudeOfTheAcendingNode", 0, 360)
   .name("Ω")
-  .onChange((value) => (ellipse.rotation.z = degToRad(value)));
+  .onChange((value) => (orbitGroup.rotation.y = degToRad(value)));
 orbitFolder
   .add(orbit, "argumentOfPeriapsis", 0, 360)
   .name("ω")
   .onChange((value) => (ellipse.rotation.z = -degToRad(value)));
 orbitFolder
   .add(orbit, "trueAnomaly", 0, 360)
-  .name("v")
+  .name("θ")
   .onChange(() => drawEllipse());
 gui
   .add(orbit, "ellipseResolution", 5, 50)
