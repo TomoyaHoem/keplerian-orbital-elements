@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/Addons.js";
+import { initSplineTexture, OrbitControls } from "three/examples/jsm/Addons.js";
 import { MeshLine, MeshLineMaterial } from "three.meshline";
 import { degToRad } from "three/src/math/MathUtils.js";
 import GUI from "lil-gui";
@@ -48,6 +48,12 @@ const material = new THREE.MeshBasicMaterial({
 const earthMesh = new THREE.Mesh(geometry, material);
 earthGroup.add(earthMesh);
 
+//* Satellite
+
+const satGeom = new THREE.ConeGeometry(0.05, 0.1, 26, 26);
+const satMat = new THREE.MeshBasicMaterial({ color: 0xd4af37 });
+const satellite = new THREE.Mesh(satGeom, satMat);
+
 //* Orbit setup
 
 const orbitGroup = new THREE.Group();
@@ -83,6 +89,7 @@ const orbit = {
 };
 
 ellipse.add(orbitPath);
+ellipse.add(satellite);
 ellipse.rotation.x = Math.PI / 2;
 orbitGroup.add(ellipse);
 
@@ -122,6 +129,55 @@ function drawEllipse() {
   orbitPath.geometry = orbitLine;
 }
 
+//* Sattelite orbit position calculation
+
+function pointOnOrbit(t) {
+  const linearEccentricity = orbit.semiMajorAxis * orbit.eccentricity;
+  const semiMinorAxis = Math.sqrt(
+    Math.pow(orbit.semiMajorAxis, 2) - Math.pow(linearEccentricity, 2)
+  );
+  const ellipseCenterX = orbit.centerOfMass.x - linearEccentricity;
+  const ellipseCenterY = orbit.centerOfMass.y;
+
+  const meanAnomaly = t * Math.PI * 2;
+
+  const eccentricAnomaly = newtonRhapson(meanAnomaly);
+
+  const px = Math.cos(eccentricAnomaly) * orbit.semiMajorAxis + ellipseCenterX;
+  const py = Math.sin(eccentricAnomaly) * semiMinorAxis + ellipseCenterY;
+
+  return new THREE.Vector2(px, py);
+}
+
+//* Newton-Rhapson method
+
+function newtonRhapson(meanAnomaly, maxIterations = 100) {
+  const h = 0.0001; //step size
+  const acceptableError = 0.00000001;
+  let guess = meanAnomaly;
+
+  for (let i = 0; i < maxIterations; i++) {
+    let y = keplerEquation(guess, meanAnomaly, orbit.eccentricity);
+    if (Math.abs(y) < acceptableError) {
+      break;
+    }
+    //approx derivative using finite difference
+    let slope = (keplerEquation(guess + h) - y) / h;
+    let step = y / slope;
+    //update next guess to where slope intersects x-axis
+    guess -= step;
+  }
+  return guess;
+
+  //* Kepler's equaiton: M = E - e * sin(E)
+
+  //E: Eccentic Anomaly, e: eccentricity, M: Mean Anomaly
+  function keplerEquation(E, M, e) {
+    //Rearrange equation to find the E for which equation will return 0
+    return M - E + e * Math.sin(E);
+  }
+}
+
 //* GUI
 
 const gui = new GUI();
@@ -159,8 +215,18 @@ gui
 
 //* Animation
 
+let time = 0;
+let satellitePosition = pointOnOrbit(0.15);
+console.log(satellitePosition);
+
 function animate() {
   //earthMesh.rotation.y += 0.002;
+
+  time = (time + 0.001) % 1;
+  let satellitePosition = pointOnOrbit(time);
+  satellite.position.x = satellitePosition.x;
+  satellite.position.y = satellitePosition.y;
+  console.log(satellitePosition);
 
   renderer.render(scene, camera);
 }
