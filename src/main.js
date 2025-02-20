@@ -50,6 +50,9 @@ earthGroup.add(earthMesh);
 
 //* Satellite
 
+const satelliteOptions = {
+  speed: 0.001,
+};
 const satGeom = new THREE.ConeGeometry(0.05, 0.1, 26, 26);
 const satMat = new THREE.MeshBasicMaterial({ color: 0xd4af37 });
 const satellite = new THREE.Mesh(satGeom, satMat);
@@ -212,21 +215,19 @@ gui
   .name("Resolution")
   .step(1)
   .onChange(() => drawEllipse());
+gui.add(satelliteOptions, "speed", 0, 0.02);
 
 //* Animation
 
 let time = 0;
-let satellitePosition = pointOnOrbit(0.15);
-console.log(satellitePosition);
 
 function animate() {
   //earthMesh.rotation.y += 0.002;
 
-  time = (time + 0.001) % 1;
+  time = (time + satelliteOptions.speed) % 1;
   let satellitePosition = pointOnOrbit(time);
   satellite.position.x = satellitePosition.x;
   satellite.position.y = satellitePosition.y;
-  console.log(satellitePosition);
 
   renderer.render(scene, camera);
 }
