@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/Addons.js";
-// import * as dat from "dat.gui";
+import { MeshLine, MeshLineMaterial } from "three.meshline";
 import { degToRad } from "three/src/math/MathUtils.js";
 import GUI from "lil-gui";
 
@@ -57,17 +57,17 @@ const curve_material = new THREE.MeshBasicMaterial({
   color: 0xffffff,
   side: THREE.DoubleSide,
   transparent: true,
-  opacity: 0.6,
+  opacity: 0.4,
 });
 // Create the final object to add to the scene
 const ellipse = new THREE.Mesh(new THREE.ShapeGeometry(), curve_material);
-const orbitPath = new THREE.Line(
-  new THREE.BufferGeometry(),
-  new THREE.LineBasicMaterial({
-    color: 0xfdffbc,
-    linewidth: 5,
-  })
-);
+const orbitPathMaterial = new MeshLineMaterial({
+  color: 0xccccff,
+  lineWidth: 0.02,
+  opacity: 0.8,
+});
+const orbitLine = new MeshLine();
+const orbitPath = new THREE.Mesh(orbitLine, orbitPathMaterial);
 
 const orbit = {
   centerOfMass: new THREE.Vector2(0, 0),
@@ -106,18 +106,20 @@ function drawEllipse() {
     const angle = (i / orbit.ellipseResolution - 1) * Math.PI * 2;
     const px = Math.cos(angle) * orbit.semiMajorAxis + ellipseCenterX;
     const py = Math.sin(angle) * semiMinorAxis + ellipseCenterY;
-    points.push(new THREE.Vector2(px, py));
+    points.push(new THREE.Vector3(px, py, 0));
     if (i === 0) {
       shape.moveTo(px, py);
     } else {
       shape.lineTo(px, py);
     }
   }
-  points.push(new THREE.Vector2(points[0].x, points[0].y));
+  points.push(new THREE.Vector3(points[0].x, points[0].y, 0));
 
   const geom = new THREE.ShapeGeometry(shape);
   ellipse.geometry = geom;
-  orbitPath.geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const line_geom = new THREE.BufferGeometry().setFromPoints(points);
+  orbitLine.setGeometry(line_geom);
+  orbitPath.geometry = orbitLine;
 }
 
 //* GUI
