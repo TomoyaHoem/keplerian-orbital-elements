@@ -3,6 +3,13 @@ import { initSplineTexture, OrbitControls } from "three/examples/jsm/Addons.js";
 import { MeshLine, MeshLineMaterial } from "three.meshline";
 import { degToRad } from "three/src/math/MathUtils.js";
 import GUI from "lil-gui";
+import Stats from "three/examples/jsm/libs/stats.module.js";
+
+//* Statistics
+
+var stats = new Stats();
+stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+document.body.appendChild(stats.dom);
 
 //* Setup Scene, Camera and Renderer
 
@@ -165,7 +172,8 @@ function newtonRhapson(meanAnomaly, maxIterations = 100) {
       break;
     }
     //approx derivative using finite difference
-    let slope = (keplerEquation(guess + h) - y) / h;
+    let slope =
+      (keplerEquation(guess + h, meanAnomaly, orbit.eccentricity) - y) / h;
     let step = y / slope;
     //update next guess to where slope intersects x-axis
     guess -= step;
@@ -224,10 +232,15 @@ let time = 0;
 function animate() {
   //earthMesh.rotation.y += 0.002;
 
+  stats.begin();
+
   time = (time + satelliteOptions.speed) % 1;
   let satellitePosition = pointOnOrbit(time);
+  //console.log(satellitePosition.x);
   satellite.position.x = satellitePosition.x;
   satellite.position.y = satellitePosition.y;
 
   renderer.render(scene, camera);
+
+  stats.end();
 }
