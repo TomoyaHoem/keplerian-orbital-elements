@@ -229,6 +229,8 @@ gui.add(satelliteOptions, "speed", 0, 0.02);
 
 let time = 0;
 
+satellite.geometry.rotateX(Math.PI / 2);
+
 function animate() {
   //earthMesh.rotation.y += 0.002;
 
@@ -239,6 +241,7 @@ function animate() {
   //console.log(satellitePosition.x);
   satellite.position.x = satellitePosition.x;
   satellite.position.y = satellitePosition.y;
+  satellite.lookAt(0, 0, 0);
 
   renderer.render(scene, camera);
 
