@@ -63,6 +63,10 @@ const satelliteOptions = {
 const satGeom = new THREE.ConeGeometry(0.05, 0.1, 26, 26);
 const satMat = new THREE.MeshBasicMaterial({ color: 0xd4af37 });
 const satellite = new THREE.Mesh(satGeom, satMat);
+let time = 0;
+let satellitePosition = new THREE.Vector3(0, 0, 0);
+
+satellite.geometry.rotateX(Math.PI / 2);
 
 //* Orbit setup
 
@@ -85,6 +89,7 @@ const orbitPathMaterial = new MeshLineMaterial({
 const orbitLine = new MeshLine();
 const orbitPath = new THREE.Mesh(orbitLine, orbitPathMaterial);
 
+let manualAnomaly = false;
 const orbit = {
   centerOfMass: new THREE.Vector2(0, 0),
   periapsis: 2,
@@ -214,10 +219,11 @@ orbitFolder
   .add(orbit, "argumentOfPeriapsis", 0, 360)
   .name("ω")
   .onChange((value) => (ellipse.rotation.z = -degToRad(value)));
-orbitFolder
+const tA = orbitFolder
   .add(orbit, "trueAnomaly", 0, 360)
   .name("θ")
-  .onChange(() => drawEllipse());
+  .onChange((value) => setTrueAnomaly(value))
+  .onFinishChange(() => endManual());
 gui
   .add(orbit, "ellipseResolution", 5, 200)
   .name("Resolution")
@@ -225,22 +231,36 @@ gui
   .onChange(() => drawEllipse());
 gui.add(satelliteOptions, "speed", 0, 0.02);
 
+//* True Anomaly
+
+function setTrueAnomaly(value) {
+  setSatellitePosition(value / 360);
+  manualAnomaly = true;
+}
+
+function endManual() {
+  time = orbit.trueAnomaly / 360;
+  setSatellitePosition(time);
+  manualAnomaly = false;
+}
+
+function setSatellitePosition(time) {
+  satellitePosition = pointOnOrbit(time);
+  satellite.position.x = satellitePosition.x;
+  satellite.position.y = satellitePosition.y;
+}
+
 //* Animation
-
-let time = 0;
-
-satellite.geometry.rotateX(Math.PI / 2);
 
 function animate() {
   //earthMesh.rotation.y += 0.002;
 
   stats.begin();
 
-  time = (time + satelliteOptions.speed) % 1;
-  let satellitePosition = pointOnOrbit(time);
-  //console.log(satellitePosition.x);
-  satellite.position.x = satellitePosition.x;
-  satellite.position.y = satellitePosition.y;
+  if (!manualAnomaly) {
+    time = (time + satelliteOptions.speed) % 1;
+    setSatellitePosition(time);
+  }
   satellite.lookAt(0, 0, 0);
 
   renderer.render(scene, camera);
