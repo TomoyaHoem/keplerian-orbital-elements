@@ -37,11 +37,11 @@ const loader = new THREE.TextureLoader();
 //* Helper setup
 
 const axesHelper = new THREE.AxesHelper(10);
-scene.add(axesHelper);
+//scene.add(axesHelper);
 const gridHelper = new THREE.GridHelper(200, 100);
 //stop helper lines from overlapping
 gridHelper.position.y -= 0.0005;
-scene.add(gridHelper);
+//scene.add(gridHelper);
 
 //* Create Earth
 
@@ -52,7 +52,25 @@ const geometry = new THREE.IcosahedronGeometry(1, 12);
 const material = new THREE.MeshBasicMaterial({
   map: loader.load("earthmap1k.jpg"),
 });
+const wireGeometry = new THREE.IcosahedronGeometry(1.05, 12).toNonIndexed();
+const positionAttribute = wireGeometry.getAttribute("position");
+const colors = [];
+
+for (let i = 0; i < positionAttribute.count; i++) {
+  colors.push(1, 1, 1); // add for each vertex color data
+}
+wireGeometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+const wireMaterial = new THREE.MeshBasicMaterial({
+  wireframe: true,
+  color: 0x5c5c5c,
+  transparent: true,
+  opacity: 0.4,
+  side: THREE.DoubleSide,
+  vertexColors: true,
+});
 const earthMesh = new THREE.Mesh(geometry, material);
+const earthWireframe = new THREE.Mesh(wireGeometry, wireMaterial);
+earthGroup.add(earthWireframe);
 earthGroup.add(earthMesh);
 
 //* Satellite
@@ -68,6 +86,16 @@ let satellitePosition = new THREE.Vector3(0, 0, 0);
 
 satellite.geometry.rotateX(Math.PI / 2);
 
+//* Satellite Line of Sight
+
+const losMaterial = new THREE.LineBasicMaterial({ color: 0xffbcfd });
+const losGeometry = new THREE.BufferGeometry().setFromPoints([
+  new THREE.Vector3(),
+  new THREE.Vector3(),
+]);
+const satelliteLoS = new THREE.Line(losGeometry, losMaterial);
+satellite.add(satelliteLoS);
+
 //* Orbit setup
 
 const orbitGroup = new THREE.Group();
@@ -78,6 +106,7 @@ const curve_material = new THREE.MeshBasicMaterial({
   side: THREE.DoubleSide,
   transparent: true,
   opacity: 0.4,
+  depthWrite: false,
 });
 // Create the final object to add to the scene
 const ellipse = new THREE.Mesh(new THREE.ShapeGeometry(), curve_material);
@@ -103,10 +132,11 @@ const orbit = {
   ellipseResolution: 50,
 };
 
-ellipse.add(orbitPath);
-ellipse.add(satellite);
-ellipse.rotation.x = Math.PI / 2;
+orbitGroup.add(orbitPath);
+orbitGroup.add(satellite);
 orbitGroup.add(ellipse);
+
+orbitGroup.rotation.x = Math.PI / 2;
 
 drawEllipse();
 
@@ -185,7 +215,7 @@ function newtonRhapson(meanAnomaly, maxIterations = 100) {
   }
   return guess;
 
-  //* Kepler's equaiton: M = E - e * sin(E)
+  //* Kepler's equation: M = E - e * sin(E)
 
   //E: Eccentic Anomaly, e: eccentricity, M: Mean Anomaly
   function keplerEquation(E, M, e) {
@@ -219,7 +249,7 @@ orbitFolder
   .add(orbit, "argumentOfPeriapsis", 0, 360)
   .name("ω")
   .onChange((value) => (ellipse.rotation.z = -degToRad(value)));
-const tA = orbitFolder
+orbitFolder
   .add(orbit, "trueAnomaly", 0, 360)
   .name("θ")
   .onChange((value) => setTrueAnomaly(value))
@@ -250,18 +280,71 @@ function setSatellitePosition(time) {
   satellite.position.y = satellitePosition.y;
 }
 
+//* Wireframe intersection
+const raycaster = new THREE.Raycaster();
+
+//* Debug line
+
+const debugGeom = new THREE.BufferGeometry().setFromPoints([
+  new THREE.Vector3(),
+  new THREE.Vector3(),
+]);
+const debugMaterial = new THREE.LineBasicMaterial({
+  color: 0x8b0000,
+  transparent: true,
+  opacity: 0.5,
+});
+const debugLine = new THREE.Line(debugGeom, debugMaterial);
+scene.add(debugLine);
+const posAttrLine = debugLine.geometry.getAttribute("position");
+let face = null;
+const faceCol = new THREE.Color(Math.random() * 0xffffff);
+const meshCol = wireGeometry.getAttribute("color");
+
 //* Animation
 
 function animate() {
   //earthMesh.rotation.y += 0.002;
 
   stats.begin();
+  const worldOrigin = satellite.worldToLocal(new THREE.Vector3(0, 0, 0));
+  // losGeometry.attributes.position.setXYZ(1, ...worldOrigin);
+  // losGeometry.attributes.position.needsUpdate = true;
 
   if (!manualAnomaly) {
     time = (time + satelliteOptions.speed) % 1;
     setSatellitePosition(time);
   }
   satellite.lookAt(0, 0, 0);
+
+  const satelliteRayPos = new THREE.Vector3(
+    satellite.position.x,
+    0,
+    satellite.position.y
+  );
+
+  raycaster.set(new THREE.Vector3(0, 0, 0), satelliteRayPos.normalize());
+
+  posAttrLine.setX(
+    1,
+    raycaster.ray.origin.x + raycaster.ray.direction.multiplyScalar(2).x
+  );
+  posAttrLine.setZ(
+    1,
+    raycaster.ray.origin.z + raycaster.ray.direction.multiplyScalar(2).z
+  );
+  posAttrLine.needsUpdate = true;
+
+  const intersects = raycaster.intersectObject(earthWireframe);
+
+  if (intersects.length > 0) {
+    face = intersects[0].face;
+
+    meshCol.setXYZ(face.a, faceCol.r, faceCol.g, faceCol.b);
+    meshCol.setXYZ(face.b, faceCol.r, faceCol.g, faceCol.b);
+    meshCol.setXYZ(face.c, faceCol.r, faceCol.g, faceCol.b);
+    meshCol.needsUpdate = true;
+  }
 
   renderer.render(scene, camera);
 
