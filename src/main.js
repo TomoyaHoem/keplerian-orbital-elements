@@ -207,7 +207,7 @@ orbitFolder
 orbitFolder
   .add(orbit, "inclination", 0, 180)
   .name("i")
-  .onChange((value) => (ellipse.rotation.y = degToRad(value)));
+  .onChange((value) => (ellipse.rotation.y = degToRad(-value)));
 orbitFolder
   .add(orbit, "longitudeOfTheAcendingNode", 0, 360)
   .name("Ω")
@@ -219,7 +219,7 @@ orbitFolder
 orbitFolder
   .add(orbit, "trueAnomaly", 0, 360)
   .name("θ")
-  .onChange((value) => setTrueAnomaly(-value))
+  .onChange((value) => setTrueAnomaly(value))
   .onFinishChange(() => endManual());
 gui
   .add(orbit, "ellipseResolution", 5, 200)
